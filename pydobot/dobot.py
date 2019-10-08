@@ -32,7 +32,8 @@ class Dobot:
                                  baudrate=115200,
                                  parity=serial.PARITY_NONE,
                                  stopbits=serial.STOPBITS_ONE,
-                                 bytesize=serial.EIGHTBITS)
+                                 bytesize=serial.EIGHTBITS,
+                                 timeout=3.0)
         is_open = self.ser.isOpen()
         if self.verbose:
             print('pydobot: %s open' % self.ser.name if is_open else 'failed to open serial port')
@@ -86,14 +87,16 @@ class Dobot:
         self.ser.write(msg.bytes())
 
     def _read_message(self):
-        time.sleep(0.1)
-        b = self.ser.read_all()
-        if len(b) > 0:
-            msg = Message(b)
-            if self.verbose:
-                print('pydobot: <<', msg)
-            return msg
-        return
+        b = bytearray(self.ser.read(3))
+        assert(len(b) == 3)
+        assert(b[2] > 0)
+        b += bytearray(self.ser.read(b[2] + 1))
+        assert(len(b) == b[2] + 4)
+
+        msg = Message(b)
+        if self.verbose:
+            print('pydobot: <<', msg)
+        return msg
 
     def _get_pose(self):
         msg = Message()
